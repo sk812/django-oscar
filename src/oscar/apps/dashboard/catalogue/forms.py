@@ -391,4 +391,4 @@ class OptionForm(forms.ModelForm):
 
     class Meta:
         model = Option
-        fields = ['name', 'type']
+        fields = ['name', 'type', 'required']

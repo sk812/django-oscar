@@ -69,7 +69,8 @@ class OptionFactory(factory.DjangoModelFactory):
 
     name = 'example option'
     code = 'example'
-    type = Meta.model.OPTIONAL
+    type = Meta.model.TEXT
+    required = False
 
 
 class AttributeOptionFactory(factory.DjangoModelFactory):
