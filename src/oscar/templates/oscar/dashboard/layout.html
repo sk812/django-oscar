@@ -1,4 +1,4 @@
-{% extends "dashboard/base.html" %}
+{% extends "oscar/dashboard/base.html" %}
 
 {% load category_tags %}
 {% load dashboard_tags %}
@@ -105,7 +105,7 @@
         {% endblock %}
 
         <div class="content">
-            {% include 'dashboard/partials/alert_messages.html' %}
+            {% include 'oscar/dashboard/partials/alert_messages.html' %}
             {% block header %}
             <div class="page-header action">
                 <h1>{% block headertext %}{% endblock %}</h1>
@@ -119,6 +119,14 @@
         </div>
     </div><!-- /container -->
 
+{% endblock %}
+
+{% block cdn_scripts %}
+  {{ block.super }}
+  {% if use_less and debug %}
+    {# Load the on-the-fly less compiler. Never do this in production. #}
+    <script src="//cdnjs.cloudflare.com/ajax/libs/less.js/3.9.0/less.min.js"></script>
+  {% endif %}
 {% endblock %}
 
 {# Local scripts #}

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from django.contrib import messages
-from django.core.exceptions import (
-    MultipleObjectsReturned, ObjectDoesNotExist, PermissionDenied)
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -22,7 +21,7 @@ PageTitleMixin = get_class('customer.mixins', 'PageTitleMixin')
 
 class WishListListView(PageTitleMixin, ListView):
     context_object_name = active_tab = "wishlists"
-    template_name = 'customer/wishlists/wishlists_list.html'
+    template_name = 'oscar/customer/wishlists/wishlists_list.html'
     page_title = _('Wish Lists')
 
     def get_queryset(self):
@@ -37,7 +36,7 @@ class WishListDetailView(PageTitleMixin, FormView):
     It is implemented as FormView because it's easier to adapt a FormView to
     display a product then adapt a DetailView to handle form validation.
     """
-    template_name = 'customer/wishlists/wishlists_detail.html'
+    template_name = 'oscar/customer/wishlists/wishlists_detail.html'
     active_tab = "wishlists"
     form_class = LineFormset
 
@@ -86,7 +85,7 @@ class WishListCreateView(PageTitleMixin, CreateView):
     the wishlist.
     """
     model = WishList
-    template_name = 'customer/wishlists/wishlists_form.html'
+    template_name = 'oscar/customer/wishlists/wishlists_form.html'
     active_tab = "wishlists"
     page_title = _('Create a new wish list')
     form_class = WishListForm
@@ -150,7 +149,7 @@ class WishListCreateWithProductView(View):
 
 class WishListUpdateView(PageTitleMixin, UpdateView):
     model = WishList
-    template_name = 'customer/wishlists/wishlists_form.html'
+    template_name = 'oscar/customer/wishlists/wishlists_form.html'
     active_tab = "wishlists"
     form_class = WishListForm
     context_object_name = 'wishlist'
@@ -176,7 +175,7 @@ class WishListUpdateView(PageTitleMixin, UpdateView):
 
 class WishListDeleteView(PageTitleMixin, DeleteView):
     model = WishList
-    template_name = 'customer/wishlists/wishlists_delete.html'
+    template_name = 'oscar/customer/wishlists/wishlists_delete.html'
     active_tab = "wishlists"
 
     def get_page_title(self):
@@ -252,17 +251,29 @@ class LineMixin(object):
     """
 
     def fetch_line(self, user, wishlist_key, line_pk=None, product_pk=None):
-        self.wishlist = WishList._default_manager.get(
-            owner=user, key=wishlist_key)
         if line_pk is not None:
-            self.line = self.wishlist.lines.get(pk=line_pk)
+            self.line = get_object_or_404(
+                Line,
+                pk=line_pk,
+                wishlist__owner=user,
+                wishlist__key=wishlist_key,
+            )
         else:
-            self.line = self.wishlist.lines.get(product_id=product_pk)
+            try:
+                self.line = get_object_or_404(
+                    Line,
+                    product_id=product_pk,
+                    wishlist__owner=user,
+                    wishlist__key=wishlist_key,
+                )
+            except Line.MultipleObjectsReturned:
+                raise Http404
+        self.wishlist = self.line.wishlist
         self.product = self.line.product
 
 
 class WishListRemoveProduct(LineMixin, PageTitleMixin, DeleteView):
-    template_name = 'customer/wishlists/wishlists_delete_product.html'
+    template_name = 'oscar/customer/wishlists/wishlists_delete_product.html'
     active_tab = "wishlists"
 
     def get_page_title(self):
@@ -270,8 +281,11 @@ class WishListRemoveProduct(LineMixin, PageTitleMixin, DeleteView):
 
     def get_object(self, queryset=None):
         self.fetch_line(
-            self.request.user, self.kwargs['key'],
-            self.kwargs.get('line_pk'), self.kwargs.get('product_pk'))
+            self.request.user,
+            self.kwargs['key'],
+            self.kwargs.get('line_pk'),
+            self.kwargs.get('product_pk')
+        )
         return self.line
 
     def get_context_data(self, **kwargs):
@@ -300,13 +314,8 @@ class WishListRemoveProduct(LineMixin, PageTitleMixin, DeleteView):
 class WishListMoveProductToAnotherWishList(LineMixin, View):
 
     def dispatch(self, request, *args, **kwargs):
-        try:
-            self.fetch_line(request.user, kwargs['key'],
-                            line_pk=kwargs['line_pk'])
-        except (ObjectDoesNotExist, MultipleObjectsReturned):
-            raise Http404
-        return super().dispatch(
-            request, *args, **kwargs)
+        self.fetch_line(request.user, kwargs['key'], line_pk=kwargs['line_pk'])
+        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         to_wishlist = get_object_or_404(

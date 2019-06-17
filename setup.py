@@ -18,7 +18,7 @@ sys.path.append(os.path.join(PROJECT_DIR, 'src'))
 from oscar import get_version  # noqa isort:skip
 
 install_requires = [
-    'django>=1.11,<2.2',
+    'django>=1.11,<2.3',
     # PIL is required for image fields, Pillow is the "friendly" PIL fork
     'pillow>=4.0',
     # We use the ModelFormSetView from django-extra-views for the basket page
@@ -27,8 +27,6 @@ install_requires = [
     'django-haystack>=2.5.0,<3.0.0',
     # Treebeard is used for categories
     'django-treebeard>=4.3.0',
-    # Sorl is used as the default thumbnailer
-    'sorl-thumbnail>=12.4.1,<12.5',
     # Babel is used for currency formatting
     'Babel>=1.0,<3.0',
     # For manipulating search URLs
@@ -45,24 +43,31 @@ install_requires = [
     'django-widget-tweaks>=1.4.1',
 ]
 
+sorl_thumbnail_version = 'sorl-thumbnail>=12.4.1,<12.5'
+easy_thumbnails_version = 'easy-thumbnails==2.5'
+
 docs_requires = [
-    'Sphinx==1.7.2',
-    'sphinxcontrib-napoleon==0.6.1',
-    'sphinx_rtd_theme==0.3.0',
-    'sphinx-issues==0.4.0',
+    'Sphinx==2.0.1',
+    'sphinxcontrib-napoleon==0.7',
+    'sphinx_rtd_theme==0.4.3',
+    'sphinx-issues==1.2.0',
+    sorl_thumbnail_version,
+    easy_thumbnails_version,
 ]
 
 test_requires = [
     'WebTest>=2.0,<2.1',
     'coverage>=4.5,<4.6',
-    'django-webtest==1.9.2',
+    'django-webtest==1.9.4',
     'py>=1.4.31',
     'psycopg2>=2.7,<2.8',
-    'pytest>=4.0,<4.1',
-    'pytest-cov==2.6.0',
-    'pytest-django==3.4.4',
-    'pytest-xdist>=1.25,<1.26',
-    'tox>=3.0,<3.1',
+    'pytest>=4.0,<4.5',
+    'pytest-cov==2.6.1',
+    'pytest-django==3.4.8',
+    'pytest-xdist>=1.25,<1.28',
+    'tox>=3.0,<3.9',
+    sorl_thumbnail_version,
+    easy_thumbnails_version,
 ]
 
 with open(os.path.join(PROJECT_DIR, 'README.rst')) as fh:
@@ -71,7 +76,7 @@ with open(os.path.join(PROJECT_DIR, 'README.rst')) as fh:
 
 setup(
     name='django-oscar',
-    version=get_version().replace(' ', '-'),
+    version=get_version(),
     url='https://github.com/django-oscar/django-oscar',
     author="David Winterbottom",
     author_email="david.winterbottom@gmail.com",
@@ -87,14 +92,16 @@ setup(
     extras_require={
         'docs': docs_requires,
         'test': test_requires,
+        'sorl-thumbnail': [sorl_thumbnail_version],
+        'easy-thumbnails': [easy_thumbnails_version],
     },
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'Framework :: Django',
         'Framework :: Django :: 1.11',
-        'Framework :: Django :: 2.0',
         'Framework :: Django :: 2.1',
+        'Framework :: Django :: 2.2',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Operating System :: Unix',
@@ -102,6 +109,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Software Development :: Libraries :: Application Frameworks']
 )
 

@@ -126,7 +126,6 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             location('templates'),
-            oscar.OSCAR_MAIN_TEMPLATE_DIR,
         ],
         'OPTIONS': {
             'loaders': [
@@ -304,6 +303,7 @@ INSTALLED_APPS = [
     'haystack',
     'treebeard',
     'sorl.thumbnail',
+    'easy_thumbnails',
     'django_tables2',
 
     # Django apps that the sandbox depends on

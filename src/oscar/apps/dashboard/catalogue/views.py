@@ -86,7 +86,7 @@ class ProductListView(SingleTableView):
     Supports the permission-based dashboard.
     """
 
-    template_name = 'dashboard/catalogue/product_list.html'
+    template_name = 'oscar/dashboard/catalogue/product_list.html'
     form_class = ProductSearchForm
     productclass_form_class = ProductClassSelectForm
     table_class = ProductTable
@@ -131,8 +131,10 @@ class ProductListView(SingleTableView):
 
     def apply_search(self, queryset):
         """
-        Filter the queryset and set the description according to the search
-        parameters given
+        Search through the filtered queryset.
+
+        We must make sure that we don't return search results that the user is not allowed
+        to see (see filter_queryset).
         """
         self.form = self.form_class(self.request.GET)
 
@@ -143,16 +145,23 @@ class ProductListView(SingleTableView):
 
         if data.get('upc'):
             # Filter the queryset by upc
-            # If there's an exact match, return it, otherwise return results
-            # that contain the UPC
-            matches_upc = Product.objects.filter(upc=data['upc'])
+            # For usability reasons, we first look at exact matches and only return
+            # them if there are any. Otherwise we return all results
+            # that contain the UPC.
+
+            # Look up all matches (child products, products not allowed to access) ...
+            matches_upc = Product.objects.filter(upc__iexact=data['upc'])
+
+            # ... and use that to pick all standalone or parent products that the user is
+            # allowed to access.
             qs_match = queryset.filter(
-                Q(id__in=matches_upc.values('id'))
-                | Q(id__in=matches_upc.values('parent_id')))
+                Q(id__in=matches_upc.values('id')) | Q(id__in=matches_upc.values('parent_id')))
 
             if qs_match.exists():
+                # If there's a direct UPC match, return just that.
                 queryset = qs_match
             else:
+                # No direct UPC match. Let's try the same with an icontains search.
                 matches_upc = Product.objects.filter(upc__icontains=data['upc'])
                 queryset = queryset.filter(
                     Q(id__in=matches_upc.values('id')) | Q(id__in=matches_upc.values('parent_id')))
@@ -202,7 +211,7 @@ class ProductCreateUpdateView(generic.UpdateView):
     Supports the permission-based dashboard.
     """
 
-    template_name = 'dashboard/catalogue/product_update.html'
+    template_name = 'oscar/dashboard/catalogue/product_update.html'
     model = Product
     context_object_name = 'product'
 
@@ -369,6 +378,10 @@ class ProductCreateUpdateView(generic.UpdateView):
         for formset in formsets.values():
             formset.save()
 
+        for idx, image in enumerate(self.object.images.all()):
+            image.display_order = idx
+            image.save()
+
         return HttpResponseRedirect(self.get_success_url())
 
     def handle_adding_child(self, parent):
@@ -411,7 +424,7 @@ class ProductCreateUpdateView(generic.UpdateView):
           to a new product creation page
         """
         msg = render_to_string(
-            'dashboard/catalogue/messages/product_saved.html',
+            'oscar/dashboard/catalogue/messages/product_saved.html',
             {
                 'product': self.object,
                 'creating': self.creating,
@@ -442,7 +455,7 @@ class ProductDeleteView(generic.DeleteView):
     last child product.
     Supports the permission-based dashboard.
     """
-    template_name = 'dashboard/catalogue/product_delete.html'
+    template_name = 'oscar/dashboard/catalogue/product_delete.html'
     model = Product
     context_object_name = 'product'
 
@@ -513,7 +526,7 @@ class ProductDeleteView(generic.DeleteView):
 
 
 class StockAlertListView(generic.ListView):
-    template_name = 'dashboard/catalogue/stockalert_list.html'
+    template_name = 'oscar/dashboard/catalogue/stockalert_list.html'
     model = StockAlert
     context_object_name = 'alerts'
     paginate_by = settings.OSCAR_STOCK_ALERTS_PER_PAGE
@@ -538,7 +551,7 @@ class StockAlertListView(generic.ListView):
 
 
 class CategoryListView(SingleTableView):
-    template_name = 'dashboard/catalogue/category_list.html'
+    template_name = 'oscar/dashboard/catalogue/category_list.html'
     table_class = CategoryTable
     context_table_name = 'categories'
 
@@ -552,7 +565,7 @@ class CategoryListView(SingleTableView):
 
 
 class CategoryDetailListView(SingleTableMixin, generic.DetailView):
-    template_name = 'dashboard/catalogue/category_list.html'
+    template_name = 'oscar/dashboard/catalogue/category_list.html'
     model = Category
     context_object_name = 'category'
     table_class = CategoryTable
@@ -580,7 +593,7 @@ class CategoryListMixin(object):
 
 
 class CategoryCreateView(CategoryListMixin, generic.CreateView):
-    template_name = 'dashboard/catalogue/category_form.html'
+    template_name = 'oscar/dashboard/catalogue/category_form.html'
     model = Category
     form_class = CategoryForm
 
@@ -602,7 +615,7 @@ class CategoryCreateView(CategoryListMixin, generic.CreateView):
 
 
 class CategoryUpdateView(CategoryListMixin, generic.UpdateView):
-    template_name = 'dashboard/catalogue/category_form.html'
+    template_name = 'oscar/dashboard/catalogue/category_form.html'
     model = Category
     form_class = CategoryForm
 
@@ -617,7 +630,7 @@ class CategoryUpdateView(CategoryListMixin, generic.UpdateView):
 
 
 class CategoryDeleteView(CategoryListMixin, generic.DeleteView):
-    template_name = 'dashboard/catalogue/category_delete.html'
+    template_name = 'oscar/dashboard/catalogue/category_delete.html'
     model = Category
 
     def get_context_data(self, *args, **kwargs):
@@ -643,7 +656,7 @@ class ProductLookupView(ObjectLookupView):
 
 class ProductClassCreateUpdateView(generic.UpdateView):
 
-    template_name = 'dashboard/catalogue/product_class_form.html'
+    template_name = 'oscar/dashboard/catalogue/product_class_form.html'
     model = ProductClass
     form_class = ProductClassForm
     product_attributes_formset = ProductAttributesFormSet
@@ -736,7 +749,7 @@ class ProductClassUpdateView(ProductClassCreateUpdateView):
 
 
 class ProductClassListView(generic.ListView):
-    template_name = 'dashboard/catalogue/product_class_list.html'
+    template_name = 'oscar/dashboard/catalogue/product_class_list.html'
     context_object_name = 'classes'
     model = ProductClass
 
@@ -747,7 +760,7 @@ class ProductClassListView(generic.ListView):
 
 
 class ProductClassDeleteView(generic.DeleteView):
-    template_name = 'dashboard/catalogue/product_class_delete.html'
+    template_name = 'oscar/dashboard/catalogue/product_class_delete.html'
     model = ProductClass
     form_class = ProductClassForm
 
@@ -771,7 +784,7 @@ class ProductClassDeleteView(generic.DeleteView):
 
 class AttributeOptionGroupCreateUpdateView(generic.UpdateView):
 
-    template_name = 'dashboard/catalogue/attribute_option_group_form.html'
+    template_name = 'oscar/dashboard/catalogue/attribute_option_group_form.html'
     model = AttributeOptionGroup
     form_class = AttributeOptionGroupForm
     attribute_option_formset = AttributeOptionFormSet
@@ -869,7 +882,7 @@ class AttributeOptionGroupUpdateView(PopUpWindowUpdateMixin, AttributeOptionGrou
 
 class AttributeOptionGroupListView(SingleTableView):
 
-    template_name = 'dashboard/catalogue/attribute_option_group_list.html'
+    template_name = 'oscar/dashboard/catalogue/attribute_option_group_list.html'
     model = AttributeOptionGroup
     table_class = AttributeOptionGroupTable
     context_table_name = 'attribute_option_groups'
@@ -882,7 +895,7 @@ class AttributeOptionGroupListView(SingleTableView):
 
 class AttributeOptionGroupDeleteView(PopUpWindowDeleteMixin, generic.DeleteView):
 
-    template_name = 'dashboard/catalogue/attribute_option_group_delete.html'
+    template_name = 'oscar/dashboard/catalogue/attribute_option_group_delete.html'
     model = AttributeOptionGroup
     form_class = AttributeOptionGroupForm
 
@@ -922,7 +935,7 @@ class AttributeOptionGroupDeleteView(PopUpWindowDeleteMixin, generic.DeleteView)
 
 class OptionListView(SingleTableView):
 
-    template_name = 'dashboard/catalogue/option_list.html'
+    template_name = 'oscar/dashboard/catalogue/option_list.html'
     model = Option
     table_class = OptionTable
     context_table_name = 'options'
@@ -930,7 +943,7 @@ class OptionListView(SingleTableView):
 
 class OptionCreateUpdateView(generic.UpdateView):
 
-    template_name = 'dashboard/catalogue/option_form.html'
+    template_name = 'oscar/dashboard/catalogue/option_form.html'
     model = Option
     form_class = OptionForm
 
@@ -987,7 +1000,7 @@ class OptionUpdateView(PopUpWindowUpdateMixin, OptionCreateUpdateView):
 
 class OptionDeleteView(PopUpWindowDeleteMixin, generic.DeleteView):
 
-    template_name = 'dashboard/catalogue/option_delete.html'
+    template_name = 'oscar/dashboard/catalogue/option_delete.html'
     model = Option
 
     def get_context_data(self, **kwargs):

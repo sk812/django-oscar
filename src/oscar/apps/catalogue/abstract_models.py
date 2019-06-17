@@ -493,7 +493,7 @@ class AbstractProduct(models.Model):
         It's possible to have options product class-wide, and per product.
         """
         pclass_options = self.get_product_class().options.all()
-        return set(pclass_options) or set(self.product_options.all())
+        return pclass_options | self.product_options.all()
 
     @cached_property
     def has_options(self):
@@ -602,8 +602,9 @@ class AbstractProduct(models.Model):
             # We return a dict with fields that mirror the key properties of
             # the ProductImage class so this missing image can be used
             # interchangeably in templates.  Strategy pattern ftw!
+            missing_image = self.get_missing_image()
             return {
-                'original': self.get_missing_image(),
+                'original': missing_image.name,
                 'caption': '',
                 'is_missing': True}
 
@@ -925,12 +926,12 @@ class AbstractProductAttributeValue(models.Model):
         verbose_name=_("Product"))
 
     value_text = models.TextField(_('Text'), blank=True, null=True)
-    value_integer = models.IntegerField(_('Integer'), blank=True, null=True)
-    value_boolean = models.NullBooleanField(_('Boolean'), blank=True)
-    value_float = models.FloatField(_('Float'), blank=True, null=True)
+    value_integer = models.IntegerField(_('Integer'), blank=True, null=True, db_index=True)
+    value_boolean = models.NullBooleanField(_('Boolean'), blank=True, db_index=True)
+    value_float = models.FloatField(_('Float'), blank=True, null=True, db_index=True)
     value_richtext = models.TextField(_('Richtext'), blank=True, null=True)
-    value_date = models.DateField(_('Date'), blank=True, null=True)
-    value_datetime = models.DateTimeField(_('DateTime'), blank=True, null=True)
+    value_date = models.DateField(_('Date'), blank=True, null=True, db_index=True)
+    value_datetime = models.DateTimeField(_('DateTime'), blank=True, null=True, db_index=True)
     value_multi_option = models.ManyToManyField(
         'catalogue.AttributeOption', blank=True,
         related_name='multi_valued_attribute_values',
@@ -1011,6 +1012,10 @@ class AbstractProductAttributeValue(models.Model):
     @property
     def _multi_option_as_text(self):
         return ', '.join(str(option) for option in self.value_multi_option.all())
+
+    @property
+    def _option_as_text(self):
+        return str(self.value_option)
 
     @property
     def _richtext_as_text(self):
